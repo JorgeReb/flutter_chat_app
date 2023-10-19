@@ -1,3 +1,4 @@
+import 'package:chat/services/socket_service.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter/material.dart';
@@ -61,7 +62,8 @@ class _FormState extends State<_Form> {
 
   @override
   Widget build(BuildContext context) {
-        final authService = Provider.of<AuthService>(context);
+    final authService = Provider.of<AuthService>(context);
+    final socketService = Provider.of<SocketService>(context);
     return Container(
       margin: const EdgeInsets.only(top: 40),
       padding: const EdgeInsets.symmetric(horizontal: 50),
@@ -94,6 +96,7 @@ class _FormState extends State<_Form> {
               final registerOk = await authService.register(nameCtrl.text.trim(),emailCtrl.text.trim(), passwordCtrl.text.trim());
 
               if (registerOk) {
+                  socketService.connect();
                 // ignore: use_build_context_synchronously
                 Navigator.pushReplacementNamed(context, 'usuarios');
               } else {

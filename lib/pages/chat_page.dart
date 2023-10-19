@@ -1,8 +1,13 @@
 import 'dart:io';
 
+import 'package:chat/models/mensajes_response.dart';
+import 'package:chat/services/auth_service.dart';
+import 'package:chat/services/chat_service.dart';
+import 'package:chat/services/socket_service.dart';
 import 'package:chat/widgets/chat_message.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -15,18 +20,55 @@ class _ChatPageState extends State<ChatPage> {
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _isWriting = false;
+  final List<ChatMessage> _messages =  [];
+  late ChatService chatService;
+  late SocketService socketService;
+  late AuthService authService;
 
-  final List<ChatMessage> _messages = const [
-    ChatMessage(texto: 'Hola', uid: '123'),
-    ChatMessage(texto: 'Hola', uid: '123'),
-    ChatMessage(texto: 'Hola', uid: '123'),
-    ChatMessage(texto: 'Hola', uid: '123223'),
-    ChatMessage(texto: 'Hola', uid: '12332'),
-    ChatMessage(texto: 'Hola', uid: '1233232'),
-  ];
+ 
+ 
+ void _escucharMensaje( dynamic payload) {
+  ChatMessage message = ChatMessage(texto: payload['mensaje'], uid: payload['de']);
+
+  setState(() {
+    _messages.insert(0,message);
+  });
+ }
+
+
+
+  @override
+  void initState() {
+    super.initState();
+      
+    chatService = Provider.of<ChatService>(context,listen: false);
+    socketService = Provider.of<SocketService>(context,listen: false);
+    authService = Provider.of<AuthService>(context,listen: false);
+    socketService.socket.on('mensaje-personal', _escucharMensaje);
+
+    _cargarHistorial(chatService.usuarioPara.uid);
+
+  }
+
+  void _cargarHistorial( String usuarioID) async{
+    List<Mensaje> chat = await chatService.getChat(usuarioID);
+
+    final history = chat.map((m) => ChatMessage(
+      texto: m.mensaje,
+      uid: m.de
+    ));
+
+    setState(() {
+      _messages.insertAll(0, history);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+
+    final chatService = Provider.of<ChatService>(context);
+    final usuarioPara = chatService.usuarioPara;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -35,17 +77,17 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               backgroundColor: Colors.blue[100],
               maxRadius: 14,
-              child: const Text(
-                'JO',
-                style: TextStyle(fontSize: 12),
+              child:  Text(
+                usuarioPara.nombre.substring(0,2),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
             const SizedBox(
               height: 3,
             ),
-            const Text(
-              'Jorge Rebollo',
-              style: TextStyle(color: Colors.black87, fontSize: 12),
+            Text(
+              usuarioPara.nombre,
+              style: const TextStyle(color: Colors.black87, fontSize: 12),
             )
           ],
         ),
@@ -58,7 +100,7 @@ class _ChatPageState extends State<ChatPage> {
             child: ListView.builder(
               physics: const BouncingScrollPhysics(),
               itemCount: _messages.length,
-              itemBuilder: (context, i) => _messages[i],
+              itemBuilder: (_, i) => _messages[i],
               reverse: true,
             ),
           ),
@@ -130,20 +172,29 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   _handleSubmit(String texto) {
-    print(texto);
+
+    if(texto.isEmpty) return; 
+    
     _textController.clear();
     _focusNode.requestFocus();
 
-    final newMessage = ChatMessage(texto: texto, uid: '123');
+    final newMessage = ChatMessage(texto: texto, uid: authService.usuario.uid);
     _messages.insert(0, newMessage);
 
     setState(() {
       _isWriting = false;
     });
+
+    socketService.emit('mensaje-personal', {
+      'de'     : authService.usuario.uid,
+      'para'   : chatService.usuarioPara.uid,
+      'mensaje': texto
+    });
   }
   
   @override
   void dispose() {
+    socketService.socket.off('mensaje-personal');
     super.dispose();
   }
 }
