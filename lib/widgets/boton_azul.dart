@@ -10,7 +10,7 @@ class BotonAzul extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: onPressed(),
+      onPressed: () => onPressed(),
       style: ButtonStyle(
         backgroundColor: MaterialStateProperty.all(Colors.blue[700]),
         textStyle: MaterialStateProperty.all(const TextStyle(color: Colors.white)),

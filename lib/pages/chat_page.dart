@@ -16,7 +16,7 @@ class _ChatPageState extends State<ChatPage> {
   final _focusNode = FocusNode();
   bool _isWriting = false;
 
-  List<ChatMessage>_messages = [
+  final List<ChatMessage> _messages = const [
     ChatMessage(texto: 'Hola', uid: '123'),
     ChatMessage(texto: 'Hola', uid: '123'),
     ChatMessage(texto: 'Hola', uid: '123'),
